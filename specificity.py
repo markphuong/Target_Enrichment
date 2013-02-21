@@ -8,7 +8,7 @@ import subprocess as sp
 import shlex
 
 ID = 'index'
-number = range(50)
+number = range(51)
 number = number[1:51]
 
 for num in number:
@@ -34,5 +34,6 @@ for num in number:
 	specificity = (values[0] + values[1]) / ( values[2] + values[3] + values[4])
 
 	out = open('mito_specificity.txt', 'a')
-	out.write(ID, '\t', str(specificity))
+	line = sample + '\t' + str(specificity) + '\n'
+	out.write(line)
 	out.close()

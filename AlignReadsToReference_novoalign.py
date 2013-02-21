@@ -10,7 +10,7 @@ import sys
 #this is a wrap around for novoalign and samtools where each sample identifier was "index#" where # was a number between 1 - 50
 
 ID = 'index' 
-number = range(50)
+number = range(51)
 number = number[1:51]
 
 r1name = '_1p_final_renamed.fastq'  #extension of front reads
@@ -24,9 +24,11 @@ for num in number:
 	#PARAMETERS for NOVOALIGN
 	insertSize='160', #mean fragment length of your libraries
 	insertSTDEV = '60', #standard deviation of length of your libraries
-	aScore = '90', #stringency score...I don't remember what 90 means, but it is stringent
+	aScore = '690', #stringency score...I don't remember what 90 means, but it is stringent
 	a1 = 'AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC', #adapter sequence
 	a2 = 'AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTA', #adapter sequence
+	truncatePaired ='100',
+	truncateUnpaired ='200',
 	read1 = ID+ str(num) + r1name,
 	read2 = ID+ str(num) + r2name,
 	unpaired = ID+str(num)+uname,
@@ -49,8 +51,8 @@ for num in number:
 
 	commands = """
 	novoindex {reference}.ndx {reference}
-	novoalign -d {reference}.ndx -f {read1} {read2} -i PE {insertSize} {insertSTDEV} -t {aScore} -a {a1} {a2} -F STDFQ -o SAM > {novoOutPaired}
-	novoalign -d {reference}.ndx -f {unpaired} -t {aScore} -a {a1} {a2} -F STDFQ -o SAM > {novoOutUnpaired}
+	novoalign -d {reference}.ndx -f {read1} {read2} -i PE {insertSize} {insertSTDEV} -t {aScore} -n {truncatePaired} -a {a1} {a2} -F STDFQ -o SAM > {novoOutPaired}
+	novoalign -d {reference}.ndx -f {unpaired} -t {aScore} -n {truncateUnpaired} -a {a1} {a2} -F STDFQ -o SAM > {novoOutUnpaired}
 	grep -v ZS:Z:NM {novoOutPaired} > {novoOutPaired}.sam
 	grep -v ZS:Z:NM {novoOutUnpaired} > {novoOutUnpaired}.sam
 	samtools view -bS {novoOutPaired}.sam > {novoOutPaired}.bam
