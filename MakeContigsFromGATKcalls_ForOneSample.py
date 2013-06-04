@@ -8,7 +8,7 @@ from pprint import pprint
 
 #Sample ID
 ID = 'index'
-num = (10)
+num = (1)
 
 sample=ID+str(num)
 
@@ -16,7 +16,7 @@ statement = 'working through ' + sample
 
 print statement
 
-VCF = sample + '_mito.vcf' #how does your VCF file end?
+VCF = sample + '_mito_annotated.vcf' #how does your VCF file end?
 
 dna = dendropy.DnaCharacterMatrix.get_from_path("mitoRef.fa", "fasta") #Load your reference files!
 
@@ -39,20 +39,26 @@ for line in VCFfile:
 	if not line.startswith('#'):
 		#get depth
 		info = line.split('\t')
+
 		chopinfo = info[7]
 		chopinfo = chopinfo.split(';')
 		DP = chopinfo[5].split('=')
-		#get Genotype
-		GT = info[-1]
-		GT = GT.split(':')
+		#get Genotype and calculate frequency of ALTERNATIVE allele
+		GT = info[-1] #grab the last item in list
+		GT = GT.split(':') #split up the shit in into a list
+		GT = GT[1] #grab the supposed AD scores
+		GT = GT.split(',')
 
-		#makes the following dictionary: {gene => {position => {info about base @ that position}}}		
-		variant[info[0]][info[1]] = dict(
-			RefBase = info[3],
-			AltBase = info[4],
-			Depth = DP[1],
-			Genotype = GT[0]
-			)
+		if len(GT) == 2: #this checks if the AD box is actually there, which should always be two numbers! one for the reference allele, one for the alternative allele
+			GT = [float(i) for i in GT]
+			Freq = GT[1] / (GT[0] + GT[1])
+			#makes the following dictionary: {gene => {position => {info about base @ that position}}}		
+			variant[info[0]][info[1]] = dict(
+				RefBase = info[3],
+				AltBase = info[4],
+				Depth = DP[1],
+				Frequency = Freq
+				)
 
 outfile = sample + '_mitoseq.fa'
 out = open(outfile, 'w')
@@ -62,17 +68,19 @@ out = open(outfile, 'w')
 for gene in refgenes: # for gene in your dictionary where the bases are in a list
 	if gene in variant: #if the gene has variants
 		for position in variant[gene]: #for the positions where there are variants 
-			#and they are fixed for the alternative allele and have a read depth greater than 5
-			if variant[gene][position]['Genotype'] == '1/1' and \
+			#and they are represented by at least 80% of the reads for that base and have a read depth greater than 5
+			if variant[gene][position]['Frequency'] > 0.8 and \
 				variant[gene][position]['Depth'] > 5 : 
-
 				 refgenes[gene][int(position)-1] = variant[gene][position]['AltBase'] #change that position to the alternative allele
+
+			elif variant[gene][position]['Frequency'] < 0.2 : 
+				continue
 
 			else:
 				refgenes[gene][int(position)-1] = 'N' #otherwise, mask it as N
 
 		#then write the sequence to a fasta file
-		gene_name = '>' + gene + '\n'		
+		gene_name = '>' + sample + '_' + gene + '\n'		
 		finalseq = ''.join(refgenes[gene]) + '\n'
 
 		out.write(gene_name)
@@ -87,7 +95,6 @@ for gene in refgenes: # for gene in your dictionary where the bases are in a lis
 		out.write(finalseq)
 
 out.close()
-
 
 
 
